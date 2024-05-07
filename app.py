@@ -10,6 +10,10 @@ from PIL import Image
 from io import BytesIO
 from streamlit_option_menu import option_menu
 
+AudioSegment.ffprobe = "C:\\FFmpeg\\ffmpeg-2024-04-29-git-cf4af4bca0-full_build\\bin\\ffprobe.exe"
+os.environ["PATH"] += os.pathsep + "C:\\FFmpeg\\ffmpeg-2024-04-29-git-cf4af4bca0-full_build\\bin"
+AudioSegment.ffmpeg = "C:\\FFmpeg\\ffmpeg-2024-04-29-git-cf4af4bca0-full_build\\bin\\ffmpeg.exe"
+
 with st.sidebar:
     selected = option_menu("Pemrosesan Media", ["Resize Image", 'Rotate Image', 'Effect Image', 'Converting Audio', 'Compress Audio', 'Text to Speech'], default_index=0)
 
