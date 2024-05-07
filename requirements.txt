@@ -1,6 +1,6 @@
-streamlit
-opencv-python
-numpy
-pillow
-pydub
-gtts
+streamlit==0.88.0
+opencv-python==4.5.3.56
+numpy==1.21.2
+pydub==0.25.1
+gtts==2.2.3
+Pillow==8.3.2
