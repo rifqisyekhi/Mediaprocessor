@@ -1,14 +1,10 @@
 import streamlit as st
 import cv2
 import numpy as np
-import librosa
-import soundfile as sf
-import matplotlib.pyplot as plt
 from IPython.display import Audio, display
 from pydub import AudioSegment
 from gtts import gTTS
 from PIL import Image
-from pydub import AudioSegment
 from io import BytesIO
 from streamlit_option_menu import option_menu
 
@@ -102,7 +98,6 @@ if selected == "Effect Image":
             st.image(bright_contrast_image, caption=f"Brightness-Contrast Image (Brightness: {brightness}, Contrast: {contrast})", use_column_width=True)
             st.success("Yeay.. Brightness-Contrast gambar berhasil!")
 
-
 # Page Converting WAV to mp3
 if selected == "Converting Audio":
     st.header("Converting Audio")
@@ -118,31 +113,44 @@ if selected == "Converting Audio":
         AudioSegment.from_file(BytesIO(audio_data), format="wav").export(mp3_data, format="mp3")
 
         # Tampilkan audio player
-        st.audio(mp3_data, format="audio/mp3", label="Converted MP3 File")
+        st.audio(mp3_data, format="audio/mp3")
+
+        # Tambahkan tombol unduh
+        st.download_button(
+            label="Download MP3",
+            data=mp3_data,
+            file_name="audio.mp3",
+            mime="audio/mp3"
+        )
           
+# Fungsi untuk melakukan kompresi audio
+def compress_audio(audio_bytes, bitrate='64k'):
+    audio = AudioSegment.from_file(BytesIO(audio_bytes))
+    compressed_audio = audio.export(format="mp3", bitrate=bitrate)
+    return compressed_audio
+
 # Page Compress Audio File
 if selected == "Compress Audio":
     st.header("Compress Audio")
+    uploaded_file = st.file_uploader("Pilih file audio", type=["mp3", "wav"])
 
-    uploaded_audio = st.file_uploader("Upload Audio File", type=["wav", "mp3"])
-    if uploaded_audio is not None:
-        audio_data = uploaded_audio.read()
-        st.audio(audio_data, format='audio')
-
-        compress_rate = st.slider("Compression Rate (%)", min_value=1, max_value=100, value=50, step=1)
-        if st.button("Compress"):
-            audio_format = uploaded_audio.name.split(".")[-1]
-            audio = AudioSegment.from_file(BytesIO(audio_data), format=audio_format)
-
-            # Calculate new sample rate based on compression rate
-            new_sample_rate = int(audio.frame_rate * (compress_rate / 100))
-            compressed_audio = audio.set_frame_rate(new_sample_rate)
-
-            # Export compressed audio
-            compressed_audio_data = BytesIO()
-            compressed_audio.export(compressed_audio_data, format=audio_format)
-
-            st.audio(compressed_audio_data, format='audio', label=f'Compressed Audio ({audio_format.upper()})', filename=f'compressed_audio.{audio_format}')
+    if uploaded_file is not None:
+        st.write('File yang diunggah:', uploaded_file.name)
+        
+        if st.button('Kompresi'):
+            compressed_audio = compress_audio(uploaded_file.getvalue())
+            
+            compressed_audio_bytes = compressed_audio.read()
+            
+            st.audio(compressed_audio_bytes, format='audio/mp3', start_time=0)
+            
+            st.download_button(
+                label="Unduh Audio Kompresi",
+                data=compressed_audio_bytes,
+                file_name="compressed_audio.mp3",
+                mime="audio/mp3"
+            )         
+            st.success("Kompresi audio berhasil!")
 
 # Page text to speech
 if selected == "Text to Speech":
