@@ -1,5 +1,6 @@
 opencv-python==4.9.0.80
+numpy==1.26.4
 pydub==0.25.1
-gtts==2.5.1
-Pillow==10.3.0
+gTTS==2.5.1
+pillow==10.3.0
 ffmpeg
