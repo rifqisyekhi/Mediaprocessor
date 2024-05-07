@@ -1,39 +1,50 @@
 import streamlit as st
+import cv2
+import numpy as np
+import librosa
+import soundfile as sf
+import matplotlib.pyplot as plt
+from IPython.display import Audio, display
+from pydub import AudioSegment
+from gtts import gTTS
 from PIL import Image
 from pydub import AudioSegment
 from io import BytesIO
 from streamlit_option_menu import option_menu
-import tempfile
-import os
 
 with st.sidebar:
-    selected = option_menu("Pemrosesan Media", ["Resize Gambar", 'Rotate Gambar', 'Converting Audio', 'Compress Audio'], default_index=0)
+    selected = option_menu("Pemrosesan Media", ["Resize Image", 'Rotate Image', 'Effect Image', 'Converting Audio', 'Compress Audio', 'Text to Speech'], default_index=0)
 
 # Page Resize Gambar
-if selected == "Resize Gambar":
-    st.header("Resize Gambar")
+if selected == "Resize Image": 
+    st.header("Resize Image")
 
     uploaded_image = st.file_uploader("Upload Gambar", type=["png", "jpg", "jpeg"])
     if uploaded_image is not None:
         image = Image.open(uploaded_image)
         st.image(image, caption="Uploaded Image", use_column_width=True)
-    
-    if st.button("Resize Image"):
-        resized_image = image.resize((int(image.width / 2), int(image.height / 2)))
-        st.image(resized_image, caption="Resized Image", use_column_width=True)
-        st.success("Yeay.. Resize gambar berhasil!")
+
+    if st.button("Perbesar Gambar"):
+        enlarged_image = image.resize((int(image.width * 2), int(image.height * 2)))
+        st.image(enlarged_image, caption="Enlarged Image", use_column_width=True)
+        st.success("Yeay.. Perbesar gambar berhasil!")
+
+    if st.button("Perkecil Gambar"):
+        shrinked_image = image.resize((int(image.width / 2), int(image.height / 2)))
+        st.image(shrinked_image, caption="Shrinked Image", use_column_width=True)
+        st.success("Yeay.. Perkecil gambar berhasil!")
 
 # Page Rotate Gambar
-if selected == "Rotate Gambar":
-    st.header("Rotate Gambar")
+if selected == "Rotate Image":
+    st.header("Rotate Image")
 
     uploaded_image = st.file_uploader("Upload Gambar", type=["png", "jpg", "jpeg"])
     if uploaded_image is not None:
         image = Image.open(uploaded_image)
         st.image(image, caption="Uploaded Image", use_column_width=True)
 
-        rotate_direction = st.selectbox("Rotate Direction", ["Up", "Down", "Left", "Right"])
-        if st.button("Rotate Image") and rotate_direction and 'image' in locals():
+        rotate_direction = st.selectbox("Rotate Direction", ["Up", "Down", "Left", "Right", "Flip Vertical", "Flip Horizontal", "Flip Both"])
+        if st.button("Apply Rotation/Flip") and rotate_direction and 'image' in locals():
             if rotate_direction == "Up":
                 rotated_image = image.rotate(270)  # Rotate 270 degrees for up
             elif rotate_direction == "Down":
@@ -42,60 +53,73 @@ if selected == "Rotate Gambar":
                 rotated_image = image.transpose(Image.FLIP_LEFT_RIGHT)  # Flip left to right for left
             elif rotate_direction == "Right":
                 rotated_image = image.transpose(Image.FLIP_TOP_BOTTOM)  # Flip top to bottom for right
+            elif rotate_direction == "Flip Vertical":
+                rotated_image = image.transpose(Image.FLIP_TOP_BOTTOM)  # Flip top to bottom
+            elif rotate_direction == "Flip Horizontal":
+                rotated_image = image.transpose(Image.FLIP_LEFT_RIGHT)  # Flip left to right
+            elif rotate_direction == "Flip Both":
+                rotated_image = image.transpose(Image.TRANSPOSE)  # Flip both (equivalent to rotate 180 degrees)
 
-            st.image(rotated_image, caption="Rotated Image", use_column_width=True)
-            st.success("Yeay.. rotate gambar berhasil!")
+            st.image(rotated_image, caption="Rotated/Flipped Image", use_column_width=True)
+            st.success("Yeay.. Rotate/flip gambar berhasil!")
 
-# Page Converting MP3 to WAV
+# Page Effect Image
+if selected == "Effect Image":
+    st.header("Effect Image")
+
+    uploaded_image = st.file_uploader("Upload Gambar", type=["png", "jpg", "jpeg"])
+    if uploaded_image is not None:
+        image = Image.open(uploaded_image)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
+        image_path = None  # Menyimpan path gambar untuk dihapus nanti
+
+        effect_option = st.selectbox("Choose Effect", ["Blur", "Noise", "Brightness"])
+        if effect_option == "Blur":
+            tingkatan_blur = st.slider("Blur Level", min_value=1, max_value=20, value=10, step=1)
+            image_np = np.array(image)
+            image_blur = cv2.blur(image_np, (tingkatan_blur, tingkatan_blur))
+            blurred_image = Image.fromarray(image_blur)
+            st.image(blurred_image, caption=f"Blurred Image (Blur Level: {tingkatan_blur})", use_column_width=True)
+            st.success("Yeay.. Blur gambar berhasil!")
+
+        elif effect_option == "Noise":
+            noise_level = st.slider("Noise Level", min_value=0, max_value=100, value=50, step=1)
+            image_np = np.array(image)
+            noise = np.random.randint(0, noise_level + 1, image_np.shape)
+            image_noise = np.clip(image_np + noise, 0, 255).astype(np.uint8)
+            noisy_image = Image.fromarray(image_noise)
+            st.image(noisy_image, caption=f"Noisy Image (Noise Level: {noise_level})", use_column_width=True)
+            st.success("Yeay.. Noise gambar berhasil!")
+
+        elif effect_option == "Brightness":
+            brightness = st.slider("Brightness", min_value=-100, max_value=100, value=0, step=1)
+            contrast = st.slider("Contrast", min_value=-100, max_value=100, value=0, step=1)
+            image_np = np.array(image)
+            image_bc = np.int16(image_np)
+            image_bc = image_bc * (contrast / 127 + 1) - contrast + brightness
+            image_bc = np.clip(image_bc, 0, 255).astype(np.uint8)
+            bright_contrast_image = Image.fromarray(image_bc)
+            st.image(bright_contrast_image, caption=f"Brightness-Contrast Image (Brightness: {brightness}, Contrast: {contrast})", use_column_width=True)
+            st.success("Yeay.. Brightness-Contrast gambar berhasil!")
+
+
+# Page Converting WAV to mp3
 if selected == "Converting Audio":
     st.header("Converting Audio")
 
-    uploaded_audio = st.file_uploader("Upload MP3 File", type=["mp3"])
-    if uploaded_audio is not None:
-        mp3_data = uploaded_audio.read()
-        st.audio(mp3_data, format='audio/mp3')
+    uploaded_file = st.file_uploader("Upload File Audio", type=["wav"])
+    
+    if uploaded_file is not None:
+        # Baca file audio
+        audio_data = uploaded_file.read()
 
-        if st.button("Convert to WAV"):
-            # Create a temporary file to store the MP3 data
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_mp3_file:
-                temp_mp3_file.write(mp3_data)
-                temp_mp3_file_path = temp_mp3_file.name
+        # Konversi ke format MP3
+        mp3_data = BytesIO()
+        AudioSegment.from_file(BytesIO(audio_data), format="wav").export(mp3_data, format="mp3")
 
-            # Convert the MP3 data to WAV
-            audio = AudioSegment.from_file(temp_mp3_file_path, format="mp3")
-            wav_data = BytesIO()
-            audio.export(wav_data, format="wav")
-
-            # Display the WAV audio
-            st.audio(wav_data, format="audio/wav", label="Converted WAV File")
-
-            # Allow the user to download the WAV file
-            st.markdown(get_audio_download_link(wav_data, label="Download Converted WAV Audio", filename="converted_audio.wav"), unsafe_allow_html=True)
-
-            # Provide an option to save the WAV file to a specific folder
-            save_folder = st.text_input("Save WAV File to Folder (leave blank to skip)")
-
-            if save_folder:
-                # Construct the path to save the WAV file
-                save_path = os.path.join(save_folder, "converted_audio.wav")
-
-                # Write the WAV data to the specified folder
-                with open(save_path, "wb") as wav_file:
-                    wav_file.write(wav_data.getbuffer())
-
-                st.success(f"WAV file saved to folder: {save_path}")
-
-            # Cleanup the temporary MP3 file
-            os.unlink(temp_mp3_file_path)
-
-            st.success("Audio converted successfully.")
-
-# Function to create a download link for audio
-def get_audio_download_link(audio_bytes, label="Download", filename="audio.wav"):
-    """Function to create a download link for audio."""
-    href = f'<a href="data:audio/wav;base64,{audio_bytes.read().decode()}" download="{filename}">{label}</a>'
-    return href
-
+        # Tampilkan audio player
+        st.audio(mp3_data, format="audio/mp3", label="Converted MP3 File")
+          
 # Page Compress Audio File
 if selected == "Compress Audio":
     st.header("Compress Audio")
@@ -120,7 +144,16 @@ if selected == "Compress Audio":
 
             st.audio(compressed_audio_data, format='audio', label=f'Compressed Audio ({audio_format.upper()})', filename=f'compressed_audio.{audio_format}')
 
-            # Display download link
-            compressed_audio_data.seek(0)
-            st.markdown(get_audio_download_link(compressed_audio_data, label="Download Compressed Audio", filename=f"compressed_audio.{audio_format}"), unsafe_allow_html=True)
-            st.success("Audio compressed successfully.")
+# Page text to speech
+if selected == "Text to Speech":
+    st.header("Text to Speech")
+    
+    teks_suara = st.text_area("Masukkan teks untuk dikonversi menjadi suara")
+    
+    if st.button("Konversi ke Suara"):
+        file_suara_hasil_tts = 'suara-hasiltts.mp3'  # Ubah ekstensi menjadi .mp3
+        tts = gTTS(teks_suara, lang='id')
+        tts.save(file_suara_hasil_tts)
+
+        play_suara = Audio(file_suara_hasil_tts, autoplay=True)
+        st.audio(file_suara_hasil_tts, format='audio/mp3')
